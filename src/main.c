@@ -14,8 +14,6 @@ void make_menu();
 
 int main(int argc, char **argv) {
     FILE *FILE_FS, *save;
-	char choose;
-
 	if (exists("fs.img") == 0)
 	{
 		int fssize = 65536 * 512;
@@ -35,35 +33,40 @@ int main(int argc, char **argv) {
 		fclose(FILE_FS);
 	}
 	FILE_FS = fopen("fs.img", "rb+");
-	while(1) {
-		make_menu();
-		scanf("%c", &choose);
 
-		if(choose == '1') {
+	while(1) {
+		int choose;
+		make_menu();
+		scanf("%d", &choose);
+
+		if(choose == 1) {
 			char filepath[100], filename[100];
 			FILE *SAVE;
 
 			printf("Digite o arquivo: ");
-			scanf("%s", &filepath);
 
+			scanf("%100s", filepath);
+			printf("%s\n", filepath);
+    		
 			SAVE = fopen(filepath, "rb");
 			if (SAVE == NULL)
 			{
 				printf("file cannot be open\n");
 				exit(-1);
 			}
-
 			strcpy(filename, get_name(filepath, '/'));
-
 			save_file(filename, SAVE, FILE_FS);
-
-			printf("%s\n", filename);
 
 			fclose(SAVE);
 
-		} else if(choose == '9') {
+		} else if(choose == 2) {
+			list(FILE_FS);
+		}else if(choose == 9) {
 			printf("saiu\n");
 			exit(0);
+		} else {
+			//clear();
+			printf("opcao invalida\n");
 		}
 	}
 
@@ -72,8 +75,8 @@ int main(int argc, char **argv) {
 
 void make_menu() {
 	printf("----------- SISTEMA DE AQUIVOS -------------\n");
-	printf("Selecione um numero:\n");
 	printf("1 - Adicionar Arquivo \n");
+	printf("2 - Listar Arquivos \n");
 	printf("9 - Sair\n");
 	printf("selecione: ");
 }
