@@ -43,12 +43,10 @@ int allocate_space(FILE *FS, int pos, int fssize, int clusters2allocate)
 	while(!feof(FS))
 	{
 		pos += 512;
-		printf("%d\n", ftell(FS));
 		fread(&reader, sizeof(reader), 1, FS);
 		fseek(FS, pos,SEEK_SET);
 		if(reader != 0) 
 		{
-			printf("1\n");
 			occupiedcluster++;
 			freeclusters = 0;
 		} else {
@@ -57,7 +55,6 @@ int allocate_space(FILE *FS, int pos, int fssize, int clusters2allocate)
 
 		if(freeclusters == clusters2allocate) 
 		{
-			printf("2\n");
 
 			return occupiedcluster;		
 		}
@@ -66,22 +63,7 @@ int allocate_space(FILE *FS, int pos, int fssize, int clusters2allocate)
 	return -1;
 }
 
-void save_file(char *filename, FILE* SAVE, FILE *FS) {
-	fseek(FS, RESERVED_CLUSTERS, SEEK_SET);
-
-	int filesize = size(SAVE);
-	int clusters = get_ncluster(filesize);
-	int current_pos = ftell(FS);
-
-	int initialcluster = allocate_space(FS, current_pos, 65536 * 512, clusters);
-
-	if(initialcluster == -1) {
-		printf("cacas");
-		exit(-1);
-	}
-
-	printf("%d\n", clusters);
-	printf("cluster = %d\n", initialcluster);
+void store_dir(FILE* FS, char* filename, int initialcluster, int filesize) {
 
 	directory rd;
 	for (int i = 0; i < 25; i++)
@@ -95,7 +77,7 @@ void save_file(char *filename, FILE* SAVE, FILE *FS) {
 	}
 	rd.attribute = 1;
 	rd.initial_cluster = initialcluster + 1;
-	rd.size_file = size(SAVE);
+	rd.size_file = filesize;
 
 	fseek(FS, 512, SEEK_SET);
 	directory dir;
@@ -110,8 +92,26 @@ void save_file(char *filename, FILE* SAVE, FILE *FS) {
 	}
 
 	fwrite(&rd, sizeof(rd), 1, FS);
-	printf("escrev = %d \n",  initialcluster * 512);
+}
+
+void save_file(char *filename, FILE* SAVE, FILE *FS) {
+	fseek(FS, RESERVED_CLUSTERS, SEEK_SET);
+
+	int filesize = size(SAVE);
+	int clusters = get_ncluster(filesize);
+	int current_pos = ftell(FS);
+
+	int initialcluster = allocate_space(FS, current_pos, 65536 * 512, clusters);
+
+	if(initialcluster == -1) {
+		printf("espaco insuficiente");
+		exit(-1);
+	}
+
+	store_dir(FS, filename, initialcluster, filesize);
+
 	fseek(FS, initialcluster * 512, SEEK_SET);
+
 	//escrevendo conteudo
 	char reader;
 	while (!feof(SAVE)) {
