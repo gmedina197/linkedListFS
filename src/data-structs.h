@@ -2,9 +2,9 @@ typedef struct boot_sector
 {
 	unsigned short bytes_per_sector;
 	unsigned char sector_per_clusters;
-    unsigned short reserved_sectors;
-    unsigned short max_files;
-    unsigned int num_sectors;
+	unsigned short reserved_sectors;
+	unsigned short max_files;
+	unsigned int num_sectors;
 
 } __attribute__((packed)) BOOT_SECTOR;
 

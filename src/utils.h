@@ -34,36 +34,31 @@ int get_ncluster(int size)
 	return (int)ceil(n);
 }
 
-int allocate_space(FILE *FS, int pos, int fssize, int clusters2allocate) 
+int allocate_space(int clusters2allocate, node_t **head)
 {
-	int freeclusters = 0;
-	int occupiedcluster = 9;
-	char reader;
-	fseek(FS, pos, SEEK_SET);
-	while(!feof(FS))
+	node_t *current = (*head);
+	int firstcluster = current->number;
+	int allocatedclusters = 0;
+
+	while (current != NULL)
 	{
-		pos += 512;
-		fread(&reader, sizeof(reader), 1, FS);
-		fseek(FS, pos,SEEK_SET);
-		if(reader != 0) 
+		if (allocatedclusters == clusters2allocate)
 		{
-			occupiedcluster++;
-			freeclusters = 0;
-		} else {
-			freeclusters++;
+			printf("alloc = %d\n", allocatedclusters);
+			(*head) = current;
+			return firstcluster;
 		}
 
-		if(freeclusters == clusters2allocate) 
-		{
-
-			return occupiedcluster;		
-		}
+		//printf("%d\n", current->number);
+		current = current->next;
+		allocatedclusters++;
 	}
 
 	return -1;
 }
 
-void store_dir(FILE* FS, char* filename, int initialcluster, int filesize) {
+void store_dir(FILE *FS, char *filename, int initialcluster, int filesize)
+{
 
 	directory rd;
 	for (int i = 0; i < 25; i++)
@@ -76,7 +71,7 @@ void store_dir(FILE* FS, char* filename, int initialcluster, int filesize) {
 			rd.filename[i] = 0x00;
 	}
 	rd.attribute = 1;
-	rd.initial_cluster = initialcluster + 1;
+	rd.initial_cluster = initialcluster;
 	rd.size_file = filesize;
 
 	fseek(FS, 512, SEEK_SET);
@@ -94,16 +89,21 @@ void store_dir(FILE* FS, char* filename, int initialcluster, int filesize) {
 	fwrite(&rd, sizeof(rd), 1, FS);
 }
 
-void save_file(char *filename, FILE* SAVE, FILE *FS) {
+void save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head)
+{
 	fseek(FS, RESERVED_CLUSTERS, SEEK_SET);
 
 	int filesize = size(SAVE);
 	int clusters = get_ncluster(filesize);
 	int current_pos = ftell(FS);
 
-	int initialcluster = allocate_space(FS, current_pos, 65536 * 512, clusters);
+	printf("%d\n", clusters);
 
-	if(initialcluster == -1) {
+	//allocate_space(FS, current_pos, 65536 * 512, clusters);
+	int initialcluster = allocate_space(clusters, &(*head));
+
+	if (initialcluster == -1)
+	{
 		printf("espaco insuficiente");
 		exit(-1);
 	}
@@ -114,7 +114,8 @@ void save_file(char *filename, FILE* SAVE, FILE *FS) {
 
 	//escrevendo conteudo
 	char reader;
-	while (!feof(SAVE)) {
+	while (!feof(SAVE))
+	{
 		fread(&reader, sizeof(reader), 1, SAVE);
 		fwrite(&reader, sizeof(reader), 1, FS);
 	}
@@ -160,8 +161,7 @@ void list(FILE *FS)
 		fread(&list, sizeof(list), 1, FS);
 		if (strcmp(list.filename, "") == 0)
 			break;
-		
+
 		printf("%s\n", list.filename);
-		
 	}
 }
