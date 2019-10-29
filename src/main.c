@@ -34,20 +34,24 @@ int main(int argc, char **argv) {
 	}
 	FILE_FS = fopen("fs.img", "rb+");
 
+	//TODO: verificar cluster inicial, possivelmente tem 1 a mais apos a segunda insercao
 	while(1) {
-		int choose;
-		make_menu();
-		scanf("%d", &choose);
+		char choose[100];
+		//make_menu();
+		printf("> ");
+		scanf("%100s", choose);
+		fflush(stdin); 
 
-		if(choose == 1) {
+		if(strstr(choose, "add") != NULL) {
 			char filepath[100], filename[100];
 			FILE *SAVE;
 
 			printf("Digite o arquivo: ");
 
 			scanf("%100s", filepath);
+			fflush(stdin); 
+
 			printf("%s\n", filepath);
-    		
 			SAVE = fopen(filepath, "rb");
 			if (SAVE == NULL)
 			{
@@ -58,16 +62,17 @@ int main(int argc, char **argv) {
 			save_file(filename, SAVE, FILE_FS);
 
 			fclose(SAVE);
-
-		} else if(choose == 2) {
+		}
+		else if (strstr(choose, "ls") != NULL) {
 			list(FILE_FS);
-		}else if(choose == 9) {
+		}
+		else if(strstr(choose, "sair") != NULL) {
 			printf("saiu\n");
 			exit(0);
 		} else {
 			//clear();
 			printf("opcao invalida\n");
-		}
+		} 
 	}
 
     fclose(FILE_FS);
@@ -77,6 +82,7 @@ void make_menu() {
 	printf("----------- SISTEMA DE AQUIVOS -------------\n");
 	printf("1 - Adicionar Arquivo \n");
 	printf("2 - Listar Arquivos \n");
+	printf("3 - Criar subdir \n");
 	printf("9 - Sair\n");
 	printf("selecione: ");
 }
