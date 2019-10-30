@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <assert.h>
 #include <math.h>
 #include "linkedList.c"
 #include "data-structs.h"
@@ -73,7 +74,18 @@ int main(int argc, char **argv)
 		}
 		else if (strstr(choose, "ls") != NULL)
 		{
-			list(FILE_FS);
+			//list(FILE_FS);
+		}
+		else if (strstr(choose, "mkdir") != NULL) {
+			char nome[25];
+
+			printf("Digite o subdir: ");
+
+			scanf("%100s", nome);
+			fflush(stdin);
+
+			make_subdir(FILE_FS, nome, &start);
+			//make_subdir(FILE_FS, nome, &start);
 		}
 		else if (strstr(choose, "sair") != NULL)
 		{

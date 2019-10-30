@@ -57,7 +57,7 @@ int allocate_space(int clusters2allocate, node_t **head)
 	return -1;
 }
 
-void store_dir(FILE *FS, char *filename, int initialcluster, int filesize)
+void store_dir(FILE *FS, char *filename, int initialcluster, int filesize, int attr)
 {
 
 	directory rd;
@@ -70,7 +70,7 @@ void store_dir(FILE *FS, char *filename, int initialcluster, int filesize)
 		else
 			rd.filename[i] = 0x00;
 	}
-	rd.attribute = 1;
+	rd.attribute = attr;
 	rd.initial_cluster = initialcluster;
 	rd.size_file = filesize;
 
@@ -108,7 +108,7 @@ void save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head)
 		exit(-1);
 	}
 
-	store_dir(FS, filename, initialcluster, filesize);
+	store_dir(FS, filename, initialcluster, filesize, 1);
 
 	fseek(FS, initialcluster * 512, SEEK_SET);
 
@@ -164,4 +164,68 @@ void list(FILE *FS)
 
 		printf("%s\n", list.filename);
 	}
+}
+
+char * checkdir(FILE *FS, char* subdirname, int pos) {
+
+	fseek(FS, pos, SEEK_SET);
+	directory list;
+
+	fread(&list, sizeof(list), 1, FS);
+
+	printf("%s %d= %s \n", list.filename, list.attribute, subdirname);
+
+	if(strcmp(list.filename, subdirname) == 0) {
+		return "achou";
+	}
+
+	/* while (!feof(FS))
+	{ */
+
+	if(list.attribute == 2) {
+		return "dir";
+		pos = list.initial_cluster * 512;
+		checkdir(FS, subdirname, pos);
+	}
+	else {
+		pos += 32;
+		checkdir(FS, subdirname, pos);
+	}
+}
+
+void make_subdir(FILE *FS, char* subdirname, node_t **head) {
+	fseek(FS, RESERVED_CLUSTERS, SEEK_SET);
+	char *token = strtok(subdirname, "/"); 
+
+	printf("%s\n", checkdir(FS, token, 512));
+
+    /* while (token != NULL) 
+    { 
+		int initialcluster = allocate_space(512, &(*head));
+
+		if (initialcluster == -1)
+		{
+			printf("espaco insuficiente");
+			exit(-1);
+		}
+
+		store_dir(FS, token, initialcluster, 512, 2);
+
+		fseek(FS, initialcluster * 512, SEEK_SET);
+		directory root;
+		for (int i = 0; i < 25; i++)
+		{
+			root.filename[i] = '.';
+			if(i > 0) {
+				root.filename[i] = 0x00;
+			}
+		}
+		root.attribute = 1;
+		root.initial_cluster = 2;
+		root.size_file = 0;
+		fwrite(&root, sizeof(root), 1, FS);
+
+        token = strtok(NULL, "/"); 
+    }  */
+
 }
