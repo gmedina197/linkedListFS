@@ -4,6 +4,13 @@ typedef struct node
     struct node *next;
 } node_t;
 
+typedef struct subdir
+{
+    char name[25];
+    char directories[32][25]; 
+    struct subdir *next;
+} subdir;
+
 void print_list(node_t *head)
 {
     node_t *current = head;
@@ -14,26 +21,6 @@ void print_list(node_t *head)
         current = current->next;
     }
 }
-
-/* void push(node_t *head, int val)
-{
-    node_t *current = head;
-    if (current != NULL)
-    {
-        while (current->next != NULL)
-        {
-            current = current->next;
-        }
-
-        current->next = malloc(sizeof(node_t));
-        current->next->number = val;
-        current->next->next = NULL;
-    } else {
-        head = malloc(sizeof(node_t));
-        head->number = 1;
-        head->next->next = NULL;
-    }
-} */
 
 void push(node_t **head, int val)
 {

@@ -16,6 +16,8 @@ int main(int argc, char **argv)
 	FILE *FILE_FS, *save;
 	node_t *start = NULL;
 
+	int RESERVED_CLUSTERS = 512 * 9;
+
 	//65527
 	int FREE_CLUSTERS = 65527;
 	for (int i = FREE_CLUSTERS - 1; i >= 0; i--)
@@ -68,12 +70,11 @@ int main(int argc, char **argv)
 				exit(-1);
 			}
 			strcpy(filename, get_name(filepath, '/'));
-			save_file(filename, SAVE, FILE_FS, &start);
+			save_file(filename, SAVE, FILE_FS, &start, RESERVED_CLUSTERS);
 
 			fclose(SAVE);
 		}
-		else if (strstr(choose, "ls") != NULL)
-		{
+		else if (strstr(choose, "ls") != NULL) {
 			//list(FILE_FS);
 		}
 		else if (strstr(choose, "mkdir") != NULL) {
@@ -84,8 +85,7 @@ int main(int argc, char **argv)
 			scanf("%100s", nome);
 			fflush(stdin);
 
-			make_subdir(FILE_FS, nome, &start);
-			//make_subdir(FILE_FS, nome, &start);
+			make_subdir(FILE_FS, nome, &start, 512);
 		}
 		else if (strstr(choose, "sair") != NULL)
 		{
