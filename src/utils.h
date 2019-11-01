@@ -54,7 +54,7 @@ int allocate_space(int clusters2allocate, node_t **head)
 	return -1;
 }
 
-void store_dir(FILE *FS, char *filename, int initialcluster, int filesize, int attr)
+directory store_dir(FILE *FS, char *filename, int initialcluster, int filesize, int attr, int pos)
 {
 
 	directory rd;
@@ -71,7 +71,7 @@ void store_dir(FILE *FS, char *filename, int initialcluster, int filesize, int a
 	rd.initial_cluster = initialcluster;
 	rd.size_file = filesize;
 
-	fseek(FS, 512, SEEK_SET);
+	fseek(FS, pos, SEEK_SET);
 	directory dir;
 	while (1)
 	{
@@ -84,9 +84,11 @@ void store_dir(FILE *FS, char *filename, int initialcluster, int filesize, int a
 	}
 
 	fwrite(&rd, sizeof(rd), 1, FS);
+
+	return rd;
 }
 
-void save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head, int RESERVED_CLUSTERS)
+directory save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head, int RESERVED_CLUSTERS)
 {
 	fseek(FS, RESERVED_CLUSTERS, SEEK_SET);
 
@@ -96,7 +98,6 @@ void save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head, int RESERVED
 
 	printf("%d\n", clusters);
 
-	//allocate_space(FS, current_pos, 65536 * 512, clusters);
 	int initialcluster = allocate_space(clusters, &(*head));
 
 	if (initialcluster == -1)
@@ -105,7 +106,7 @@ void save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head, int RESERVED
 		exit(-1);
 	}
 
-	store_dir(FS, filename, initialcluster, filesize, 1);
+	directory wd = store_dir(FS, filename, initialcluster, filesize, 1, 512);
 
 	fseek(FS, initialcluster * 512, SEEK_SET);
 
@@ -116,6 +117,8 @@ void save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head, int RESERVED
 		fread(&reader, sizeof(reader), 1, SAVE);
 		fwrite(&reader, sizeof(reader), 1, FS);
 	}
+
+	return wd;
 }
 
 void list(FILE *FS)
@@ -207,7 +210,7 @@ int check_dir(FILE* FS, char* dirname, int pos) {
 	return 0;
 }
 
-int write_dir(FILE *FS, char* dirname, node_t **head, int pos) {
+directory write_dir(FILE *FS, char* dirname, node_t **head, int pos) {
 		int initialcluster = allocate_space(1, &(*head));
 
 		if (initialcluster == -1)
@@ -215,35 +218,36 @@ int write_dir(FILE *FS, char* dirname, node_t **head, int pos) {
 			printf("espaco insuficiente");
 			exit(-1);
 		}
-		fseek(FS, pos, SEEK_SET);
-		store_dir(FS, dirname, initialcluster, 512, 2);
+		directory dc = store_dir(FS, dirname, initialcluster, 512, 2, pos);
 
-		return initialcluster;
+		return dc;
 }
 
-void create_subdir(char* current, char **subdirs, int depth, int pos, node_t **head, FILE* FS) {
+void create_subdir(char* current, char **subdirs, int depth, int pos, node_t **head, FILE* FS, int array_size) {
+	if(depth < array_size) {
 		int exists = check_dir(FS, current, pos);
 
-		printf("%d\n", pos);
-
+		directory subdir;
 		if(exists == 0) {
-			printf("gravou\n");
-			int cluster_subdir = write_dir(FS, current, &(*head), pos);
-			//fseek(FS, cluster_subdir * 512, SEEK_SET);
-			return;
+			printf("%d\n", pos);
+			fseek(FS, pos, SEEK_SET);
+
+
+			subdir = write_dir(FS, current, &(*head), pos);
+			printf("%d\n", ftell(FS));
 		}
 
 		directory list;
 
-		pos = 512;
 		fseek(FS, pos, SEEK_SET);
 		while(!feof(FS)) {
 			fread(&list, sizeof(list), 1, FS);
 
 			if(strcmp(list.filename, subdirs[depth]) == 0) {
-				create_subdir(subdirs[depth+1], subdirs, depth + 1, pos, &(*head), FS);	
+				create_subdir(subdirs[depth+1], subdirs, depth + 1, list.initial_cluster * 512, &(*head), FS, array_size);	
 			}
 		}
+	}
 }
 
 void make_subdir(FILE *FS, char* subdirname, node_t **head, int offset) {
@@ -258,7 +262,7 @@ void make_subdir(FILE *FS, char* subdirname, node_t **head, int offset) {
 			//printf("%s\n", subdir_names[i]);
 			array_size++;
 		}
-		create_subdir(subdir_names[0], subdir_names, 0, offset, &(*head), FS);
+		create_subdir(subdir_names[0], subdir_names, 0, offset, &(*head), FS, array_size);
 
 	} else {
 		printf("erro");
