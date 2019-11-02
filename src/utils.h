@@ -88,13 +88,12 @@ directory store_dir(FILE *FS, char *filename, int initialcluster, int filesize, 
 	return rd;
 }
 
-directory save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head, int RESERVED_CLUSTERS)
+directory save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head, int pos)
 {
-	fseek(FS, RESERVED_CLUSTERS, SEEK_SET);
+	fseek(FS, pos, SEEK_SET);
 
 	int filesize = size(SAVE);
 	int clusters = get_ncluster(filesize);
-	int current_pos = ftell(FS);
 
 	printf("%d\n", clusters);
 
@@ -106,7 +105,7 @@ directory save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head, int RES
 		exit(-1);
 	}
 
-	directory wd = store_dir(FS, filename, initialcluster, filesize, 1, 512);
+	directory wd = store_dir(FS, filename, initialcluster, filesize, 1, pos);
 
 	fseek(FS, initialcluster * 512, SEEK_SET);
 
@@ -121,17 +120,23 @@ directory save_file(char *filename, FILE *SAVE, FILE *FS, node_t **head, int RES
 	return wd;
 }
 
-void list(FILE *FS)
+void list_files(FILE *FS, int pos, int space)
 {
-	fseek(FS, 512, SEEK_SET);
+	fseek(FS, pos, SEEK_SET);
 	directory list;
-	while (1)
-	{
-		fread(&list, sizeof(list), 1, FS);
-		if (strcmp(list.filename, "") == 0)
-			break;
 
-		printf("%s\n", list.filename);
+	fread(&list, sizeof(list), 1, FS);
+		
+	if (strcmp(list.filename, "") != 0) {
+		for (int i = 0; i < space; i++) {
+			printf(" "); 
+		}
+		printf("%s\n", list.filename); 
+		if(list.attribute == 2) {
+			list_files(FS, list.initial_cluster * 512, space + 1);
+		}
+
+		list_files(FS, pos+32, space);
 	}
 }
 
@@ -183,18 +188,6 @@ char** str_split(char* a_str, const char a_delim)
     return result;
 }
 
-/* 
-void criarSubdir(Diretorio atual, List<String> diretorios, int profundidade) // diretorios seria uma lista ['dir1', 'dir2', 'dir3']
-{
-	se (não existe subdiretorio chamado diretorios[profundidade] dentro do cluster do arquivo)
-		criar subdiretorio chamado diretorios[profundidade];
-
-	while(!feof(FILESYSTEM))
-               struct subdir  = leitura do arquivo
-		se (subdir.nome == diretorios[profundidade])
-			criarSubdir(subdir, diretorios, profundidade + 1);
-} */
-
 int check_dir(FILE* FS, char* dirname, int pos) {
 	fseek(FS, pos, SEEK_SET);
 	directory list;
@@ -229,12 +222,8 @@ void create_subdir(char* current, char **subdirs, int depth, int pos, node_t **h
 
 		directory subdir;
 		if(exists == 0) {
-			printf("%d\n", pos);
 			fseek(FS, pos, SEEK_SET);
-
-
 			subdir = write_dir(FS, current, &(*head), pos);
-			printf("%d\n", ftell(FS));
 		}
 
 		directory list;
@@ -269,17 +258,94 @@ void make_subdir(FILE *FS, char* subdirname, node_t **head, int offset) {
 	}
 }
 
- /* 
-		fseek(FS, initialcluster * 512, SEEK_SET);
-		directory root;
-		for (int i = 0; i < 25; i++)
+directory get_subdir(FILE* FS, int pos, char *dirname) {
+	fseek(FS, pos, SEEK_SET);
+	directory dir;
+	while (1)
+	{
+		fread(&dir, sizeof(dir), 1, FS);
+		if (strcmp(dir.filename, dirname) == 0)
 		{
-			root.filename[i] = '.';
-			if(i > 0) {
-				root.filename[i] = 0x00;
+			return dir;
+		}
+	}
+}
+
+void add_to_subdir(FILE* FS, FILE *SAVE, char *filename, char **subdirnames,int depth, int pos, node_t **head, int array_size) {
+		int exists = check_dir(FS, subdirnames[depth], pos);
+
+		directory subdir;
+		if(exists == 1) {
+			fseek(FS, pos, SEEK_SET);
+			subdir = get_subdir(FS, pos, subdirnames[depth]);
+			if(depth == array_size - 1) {
+				save_file(filename, SAVE, FS, &(*head), subdir.initial_cluster * 512);
+			} else {
+				add_to_subdir(
+					FS, 
+					SAVE, 
+					filename, 
+					subdirnames, 
+					depth+1, 
+					subdir.initial_cluster* 512, 
+					&(*head), 
+					array_size
+				);
 			}
 		}
-		root.attribute = 1;
-		root.initial_cluster = 2;
-		root.size_file = 0;
-		fwrite(&root, sizeof(root), 1, FS); */
+}
+
+void verify_subdir(FILE *FS, FILE *SAVE, char* subdirname,char *filename, node_t **head) {
+	fseek(FS, 512, SEEK_SET);
+
+	char** subdir_names = str_split(subdirname, '/');
+
+	if(subdir_names) {
+		int array_size = 0;
+		for (int i = 0; *(subdir_names + i); i++)
+		{
+			//printf("%s\n", subdir_names[i]);
+			array_size++;
+		}
+		add_to_subdir(FS,SAVE, filename, subdir_names, 0, 512, &(*head), array_size);
+
+	} else {
+		printf("erro");
+	}
+}
+
+void export_dir(FILE *FS, FILE *SAVE, char *filename) {
+	fseek(FS, 512, SEEK_SET);
+	directory dir;
+	while (!feof(FS))
+	{
+		fread(&dir, sizeof(dir), 1, FS);
+		if (strcmp(dir.filename, filename) == 0)
+		{
+			fseek(FS, dir.initial_cluster * 512, SEEK_SET);
+			char reader = 0;
+			for (int i = 0; i < dir.size_file; i++)
+			{
+				fread(&reader, sizeof(reader), 1, FS);
+				fwrite(&reader, sizeof(reader), 1, SAVE);
+			}
+			break;
+		}
+	}
+}
+
+void format(FILE *FS, int num_sectors) {
+	int bytes_to_format = num_sectors * 512; //cluster = sector;
+
+	unsigned char zero = 0;
+	fseek(FS, 9 * 512, SEEK_SET);
+	printf("Formatando...\n");
+	for (int i = 0; i < bytes_to_format; i++)
+	{
+		fwrite(&zero, sizeof(zero), 1, FS);
+	}
+
+	boot_sec(FS);
+	make_dir(FS);
+	printf("Concluido\n");
+}

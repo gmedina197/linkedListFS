@@ -1,5 +1,6 @@
 void boot_sec(FILE *fs)
 {
+	rewind(fs);
 	BOOT_SECTOR bs;
 	bs.bytes_per_sector = 512;
 	bs.sector_per_clusters = 1;

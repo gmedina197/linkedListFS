@@ -9,8 +9,6 @@
 #include "makeFs.h"
 #include "utils.h"
 
-#define clear() printf("\033[H\033[J")
-
 int main(int argc, char **argv)
 {
 	FILE *FILE_FS, *save;
@@ -70,12 +68,12 @@ int main(int argc, char **argv)
 				exit(-1);
 			}
 			strcpy(filename, get_name(filepath, '/'));
-			save_file(filename, SAVE, FILE_FS, &start, RESERVED_CLUSTERS);
+			save_file(filename, SAVE, FILE_FS, &start, 512);
 
 			fclose(SAVE);
 		}
 		else if (strstr(choose, "ls") != NULL) {
-			//list(FILE_FS);
+			list_files(FILE_FS, 512, 0);
 		}
 		else if (strstr(choose, "mkdir") != NULL) {
 			char nome[25];
@@ -87,14 +85,80 @@ int main(int argc, char **argv)
 
 			make_subdir(FILE_FS, nome, &start, 512);
 		}
+		else if(strstr(choose, "filesb") != NULL) {
+			char filepath[100], filename[25], subdirname[25];
+			FILE *SAVE;
+
+			printf("Digite o arquivo: ");
+
+			scanf("%100s", filepath);
+			fflush(stdin);
+
+			SAVE = fopen(filepath, "rb");
+			if (SAVE == NULL)
+			{
+				printf("file cannot be open\n");
+				exit(-1);
+			}
+			strcpy(filename, get_name(filepath, '/'));
+			
+			printf("Digite o subdir: ");
+
+			scanf("%s", subdirname);
+			fflush(stdin);
+
+			verify_subdir(FILE_FS, SAVE, subdirname, filename, &start);
+			//save_file(filename, SAVE, FILE_FS, &start, RESERVED_CLUSTERS);
+
+			fclose(SAVE);
+		}
 		else if (strstr(choose, "sair") != NULL)
 		{
 			printf("saiu\n");
 			exit(0);
 		}
+		else if(strstr(choose, "formatar") != NULL) {
+			int numsector;
+
+			printf("Numero de setores: ");
+			scanf("%d", &numsector);
+
+			format(FILE_FS, numsector);
+		}
+		else if(strstr(choose, "exportar") != NULL) {
+			char filepath[100], filename[25];
+			FILE *SAVE;
+
+			printf("Digite o arquivo: ");
+
+			scanf("%100s", filepath);
+			fflush(stdin);
+
+			SAVE = fopen(filepath, "wb");
+			if (SAVE == NULL)
+			{
+				printf("file cannot be open\n");
+				exit(-1);
+			}
+
+			strcpy(filename, get_name(filepath, '/'));
+			
+
+			fflush(stdin);
+
+			export_dir(FILE_FS, SAVE, filename);
+
+			fclose(SAVE);
+		}
+		else if(strstr(choose, "ajuda") != NULL) {
+			printf("add - adiciona arquivo ao root\n");
+			printf("ls - lista arquivos\n");
+			printf("mkdir - criar diretorios de n niveis\n");
+			printf("filesb - adiciona arquivo em subdir\n");
+			printf("exportar - exporta um arquivo\n");
+		}
 		else
 		{
-			//clear();
 			printf("opcao invalida\n");
 		}
 	}
